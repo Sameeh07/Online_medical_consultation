@@ -148,7 +148,8 @@ $ npm start
 
 
 
-### Snapshots:
+
+## Snapshots:
 
 <img width="1913" height="875" alt="Screenshot 2025-05-12 053408" src="https://github.com/user-attachments/assets/06b58f16-243f-4a09-b825-0afbfc1816e7" /> *Dashboard overview showing the main interface of the Medical Consultation System with patient information and navigation options.* <img width="957" height="738" alt="when there is no doctor online" src="https://github.com/user-attachments/assets/e5787fb8-68bc-4e86-84ab-00dc790caaff" /> *Patient view when no doctors are currently available online for consultation, displaying an empty doctors list with appropriate messaging.* <img width="1919" height="852" alt="testing doctor and patient live video call connection" src="https://github.com/user-attachments/assets/16b125c7-483a-4d1d-b4bb-5374c2408254" /> *Live video consultation in progress between doctor and patient with both video feeds visible, demonstrating the real-time communication capabilities of the platform.* <img width="937" height="775" alt="incoming call on doctor's device" src="https://github.com/user-attachments/assets/6ad60aa6-6ac6-4bbf-ad80-9490b3886d2a" /> *Incoming call notification on the doctor's interface with options to accept or decline the patient's consultation request.* <img width="933" height="849" alt="availabe doctor shown in patient's home page 2" src="https://github.com/user-attachments/assets/3ef248ae-5a93-4c93-9c0c-34ee48ad39e0" /> *Patient's view of available doctors with detailed information including specialization, experience, and contact options for initiating a video consultation.* <img width="958" height="727" alt="availabe doctor shown in patient's home page 1" src="https://github.com/user-attachments/assets/b78f9188-3b2a-468d-ac8d-65363ce98777" /> *Alternative view of the patient's homepage showing online doctors available for immediate consultation with their credentials and call buttons.*
 
