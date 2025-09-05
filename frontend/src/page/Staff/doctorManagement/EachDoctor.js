@@ -79,7 +79,9 @@ const EachDoctor = ({match}) => {
               </div>
               <div className='flex justify-center'>
                 <h1 className='text-center bg-pink-200 rounded-lg w-32'>
-                  {doctor.data.specialization.specialization}
+                  {doctor.data && doctor.data.specialization && doctor.data.specialization.specialization 
+                    ? doctor.data.specialization.specialization 
+                    : 'Not specified'}
                 </h1>
               </div>
             </div>

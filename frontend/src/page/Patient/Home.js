@@ -27,19 +27,72 @@ function Home() {
 
 
   useEffect(() => {
-    const newSocket = io('localhost:5000/'); // socket connect
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+    const newSocket = io(socketUrl, {
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      transports: ['websocket', 'polling']
+    });
+    
+    console.log("Connecting to socket server at:", socketUrl);
+    
+    // Socket connection status handling
+    newSocket.on('connect', () => {
+      console.log('Socket connected successfully with ID:', newSocket.id);
+      // Request online doctor list after successful connection
+      console.log("Requesting online doctors...");
+      newSocket.emit('get-online-doctor', newSocket.id);
+    });
+    
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      alert('Error connecting to the server. Please check your internet connection and try again.');
+    });
+    
+    newSocket.on('updateDoctorList', (doctor) => {
+      console.log("Received doctor list:", doctor);
+      
+      if (Object.keys(doctor).length === 0) {
+        console.log("No doctors online");
+        setOnlineDoc({
+          data: [],
+          isPending: false,
+          error: 'No doctor Online',
+        });
+      } else {
+        console.log(`Found ${Object.keys(doctor).length} online doctors, fetching their data...`);
+        fetchDoctorData(Object.keys(doctor), setOnlineDoc, type, search);
+      }
+    });
+    
     setSocket(newSocket);
-    getOnlineDoc(newSocket, setOnlineDoc, type, search); // get online doctor
-    fetchSpecialization(setSpec); // get specialization
-  }, [setSocket, type, search, setSpec]);
+    
+    // Cleanup on unmount
+    return () => {
+      if (newSocket) {
+        console.log("Disconnecting socket on cleanup");
+        newSocket.disconnect();
+      }
+    };
+  }, [setSocket, type, search]);
+  
+  // Fetch specialization in a separate useEffect
+  useEffect(() => {
+    fetchSpecialization(setSpec);
+  }, [setSpec]);
 
 
+  // Improve the error handling for the filter by type
   if (onlineDoc.isPending) {
     return <Spinner />;
-  } else if (!onlineDoc.isPending && onlineDoc.data !== null && onlineDoc.data.length === 0 && type === 'All' && search === '') {
+  } else if (!onlineDoc.isPending && (!onlineDoc.data || onlineDoc.data.length === 0)) {
     return (
       <div className='flex justify-center items-center mt-52'>
-        <h1 className='font-fontPro text-4xl text-gray-700'>There is no online doctor at this moment.</h1>
+        <h1 className='font-fontPro text-4xl text-gray-700'>
+          {type !== 'All' || search !== '' 
+            ? "No doctors match your search criteria" 
+            : "There are no online doctors at this moment."}
+        </h1>
       </div>
     );
   } else {
@@ -107,12 +160,14 @@ function Home() {
       </div>}
         <div className='my-10 mx-auto max-w-7xl w-full px-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7'>
           
-          {!onlineDoc.isPending && onlineDoc.data !== null ? (
+          {!onlineDoc.isPending && onlineDoc.data && onlineDoc.data.length > 0 ? (
             onlineDoc.data.map((data) => (
-              <DoctorCard key={data.name} doctor={data} />
+              <DoctorCard key={data._id || data.name} doctor={data} />
             ))
           ) : (
-            <div></div>
+            <div className="col-span-3 flex justify-center items-center mt-10">
+              <h1 className='font-fontPro text-2xl text-gray-600'>No doctors match your search criteria</h1>
+            </div>
           )}
         </div>
       </div>
@@ -121,30 +176,36 @@ function Home() {
 }
 
 // get all avaliable doctors
+// eslint-disable-next-line no-unused-vars
 const getOnlineDoc = (socket, setOnlineDoc, type, search) => {
-  socket.on('connect', () => {
-    socket.emit('get-online-doctor', socket.id);
-  });
+  console.log("Requesting online doctor list...");
+  socket.emit('get-online-doctor', socket.id);
+  
   socket.on('updateDoctorList', (doctor) => {
+    console.log("Received doctor list:", doctor);
+    
     if (Object.keys(doctor).length === 0) {
+      console.log("No doctors online");
       setOnlineDoc({
         data: [],
         isPending: false,
         error: 'No doctor Online',
       });
     } else {
+      console.log(`Found ${Object.keys(doctor).length} online doctors, fetching their data...`);
       fetchDoctorData(Object.keys(doctor), setOnlineDoc, type, search);
     }
-    disconnectSocket(socket);
   });
 };
 
 // get doctor data by id
 const fetchDoctorData = (doctorId, setOnlineDoc, type, search) => {
   const id = doctorId.toString();
-  console.log(id)
+  console.log("Fetching doctor data for IDs:", id);
+  
   const fetchDoctor = async () => {
     try {
+      console.log("Making API request to:", `${API_BASE_URL}/doctor/${id}`);
       let res = await Axios.get(
         `${API_BASE_URL}/doctor/${id}`,
         {
@@ -153,19 +214,34 @@ const fetchDoctorData = (doctorId, setOnlineDoc, type, search) => {
           },
         }
       );
+      
+      if (!res || !res.data) {
+        console.error("Invalid response format:", res);
+        setOnlineDoc({
+          data: [],
+          isPending: false,
+          error: "Failed to retrieve doctor data",
+        });
+        return;
+      }
+      
       let data = res.data.data;
+      console.log("Received doctor data:", data);
 
-      console.log(data);
-
+      // Convert to array if not already
       if (!Array.isArray(data)) {
+        console.log("Converting single doctor to array");
         data = [data];
       }
-      //filtter by type
+      
+      //filter by type
       if (type !== 'All') {
+        console.log(`Filtering doctors by specialization: ${type}`);
         let fDoc = data.filter(function (el) {
-          return el.specialization.specialization === type;
+          return el && el.specialization && el.specialization.specialization === type;
         });
         data = fDoc;
+        console.log(`Found ${data.length} doctors with specialization ${type}`);
       }
 
       //filtter by type
@@ -193,6 +269,7 @@ const fetchDoctorData = (doctorId, setOnlineDoc, type, search) => {
   fetchDoctor();
 };
 
+// eslint-disable-next-line no-unused-vars
 const disconnectSocket = (socket) => {
   socket.disconnect();
 };

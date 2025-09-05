@@ -87,7 +87,9 @@ const EditDoctorProfile = () => {
               </div>
               <div className='flex justify-center'>
                 <h1 className='text-center bg-pink-200 rounded-lg w-32'>
-                  {data.specialization.specialization}
+                  {data && data.specialization && data.specialization.specialization 
+                    ? data.specialization.specialization 
+                    : 'Not specified'}
                 </h1>
               </div>
             </div>

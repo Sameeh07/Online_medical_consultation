@@ -4,7 +4,8 @@
     3. doctor availability 
   These function will work with the front-end for real-time communication */ 
 
-const userSocketIdMap = new Map(); // Map of online usernames and their socket clients
+
+const userSocketIdMap = new Map(); //a map of online usernames and their clients
 
 function useSocket(io) {
   let users = {};
@@ -21,14 +22,9 @@ function useSocket(io) {
       console.error(`Socket error for ${socket.id}:`, error);
     });
 
-    // ** VIDEO CHAT APP **
-    // Join consultation room
+    // ** video chat app **
+    // join consultation room
     socket.on('join-room', (roomId, userId) => {
-      if (!roomId || !userId) {
-        console.error(`Invalid join-room parameters: roomId=${roomId}, userId=${userId}`);
-        return;
-      }
-      
       console.log(`User ${userId} joining room ${roomId} with socket ${socket.id}`);
       
       // Leave any previous rooms to avoid conflicts
@@ -48,11 +44,9 @@ function useSocket(io) {
       if (!io.videoRooms.has(roomId)) {
         io.videoRooms.set(roomId, new Set());
       }
-      
-      // Store this userId in the room's participant set
       io.videoRooms.get(roomId).add(userId);
       
-      // Join the socket to the room
+      // Join the new room
       socket.join(roomId);
       
       // Store user data for easier reference
@@ -74,16 +68,14 @@ function useSocket(io) {
 
       // Handle peer ID updates (for reconnection support)
       socket.on('peer-id', (peerId, roomId) => {
-        if (!peerId || !roomId) return;
-        
         console.log(`User ${userId} updated peer ID to ${peerId} in room ${roomId}`);
         // Store the peer ID with the socket for reference
         socket.peerId = peerId;
-        // Notify others about this peer
+        // Notify others about this peer (optional - for advanced reconnection)
         socket.to(roomId).emit('peer-updated', userId, peerId);
       });
 
-      // Handle messages within room
+      // sent message to other to join
       socket.on('message', (message) => {
         console.log(`Message in room ${roomId}: ${message}`);
         socket.to(roomId).emit('createMessage', message, userId);
@@ -91,13 +83,11 @@ function useSocket(io) {
 
       // Handle explicit room leaving
       socket.on('leave-room', (roomId, userId) => {
-        if (!roomId || !userId) return;
-        
         console.log(`User ${userId} explicitly left room ${roomId}`);
         handleUserLeaving(socket, roomId, userId);
       });
 
-      // Disconnect from the room when socket disconnects
+      // disconnect from the room
       socket.on('disconnect', () => {
         console.log(`Socket ${socket.id} disconnected, user ${userId} left room ${roomId}`);
         handleUserLeaving(socket, roomId, userId);
@@ -106,8 +96,6 @@ function useSocket(io) {
     
     // Helper function to handle user leaving a room
     function handleUserLeaving(socket, roomId, userId) {
-      if (!roomId || !userId) return;
-      
       // Remove from room tracking
       if (io.videoRooms && io.videoRooms.has(roomId)) {
         io.videoRooms.get(roomId).delete(userId);
@@ -130,14 +118,9 @@ function useSocket(io) {
       console.log(`Room ${roomId} now has ${remainingCount} participants after disconnect`);
     }
 
-    // ** DOCTOR AVAILABILITY **
+    // ** doctor availability **
     socket.on('online-user', (socketId, userId) => {
-      if (!socketId || !userId) {
-        console.error(`Invalid online-user parameters: socketId=${socketId}, userId=${userId}`);
-        return;
-      }
-      
-      // Doctor joins the available doctor room
+      // doctor join the available doctor room
       console.log(`Doctor ${userId} is now online with socket ${socketId}`);
       users = addClientToMap(userId, socketId);
       
@@ -145,7 +128,7 @@ function useSocket(io) {
       console.log("Broadcasting updated doctor list");
       socket.broadcast.emit('updateDoctorList', users);
 
-      // Doctor exit handling
+      // doctor exit the online doctor room
       socket.on('disconnect', () => {
         console.log(`Doctor ${userId} went offline`);
         users = removeClientFromMap(userId, socketId);
@@ -154,112 +137,71 @@ function useSocket(io) {
       });
     });
 
-    // Client gets the online doctor list
-    socket.on('get-online-doctor', (filter) => {
-      console.log(`Client requesting online doctors for filter: ${filter}`);
+    // client get the online doctor list
+    socket.on('get-online-doctor', (fillter) => {
+      console.log(`Client requesting online doctors for filter: ${fillter}`);
       console.log("Current online doctors:", users);
-      socket.join(filter);
-      io.to(filter).emit('updateDoctorList', users);
+      socket.join(fillter);
+      io.to(fillter).emit('updateDoctorList', users);
     });
 
-    // ** VIDEO CONSULTATION CALL MANAGEMENT **
-    // Patient makes a call
+    // ** video consultation **
+    // patient make a call
     socket.on('call', (socketId, message) => {
-      if (!socketId || !message || !message.from || !message.url) {
-        console.error('Invalid call parameters:', { socketId, message });
-        return;
-      }
-      
       console.log(`Call request from ${message.from} to ${socketId} for room ${message.url}`);
-      
-      // Ensure the patient info is included in the message
-      if (!message.patient) {
-        message.patient = { name: "Unknown Patient" };
-      }
-      
-      console.log("Call with patient info:", message.patient);
-      
-      // Check if the room already exists/is in use
-      let rooms = mapToObject(io.sockets.adapter.rooms);
+      let rooms = mapToObject(io.sockets.adapter.rooms); // set request to doctor
       if (!rooms[message.url]) {
         console.log(`Room ${message.url} is Available for call`);
-        // Send call info to the doctor
         io.to(socketId).emit('retrieve', message);
-        // Tell patient the call is being connected
         io.to(message.from).emit('availableCall', true);
       } else {
         console.log(`Room ${message.url} is Not Available for call`);
-        // Tell patient the doctor is unavailable
         io.to(message.from).emit('availableCall', false);
       }
     });
 
-    // Doctor answers call 
+    // doctor answer call 
     socket.on('answerCall', (fromId, status) => {
-      if (!fromId) {
-        console.error('Invalid answerCall parameters:', { fromId, status });
-        return;
-      }
-      
       console.log(`Doctor answered call from ${fromId} with status: ${status}`);
       io.to(fromId).emit('retrieveCall', status);
     });
   });
 }
 
-// This function adds a doctor to the available doctor room 
-// Doctors in this room are online and available for consultation
+// This function is use for adding the doctor to the available doctor room 
+// Doctor that are in that room are doctor who online and can have consult with patient.
 function addClientToMap(userId, socketId) {
-  if (!userId || !socketId) return mapToObject(userSocketIdMap);
-  
   if (!userSocketIdMap.has(userId)) {
-    // When user is joining first time
+    //when user is joining first time
     userSocketIdMap.set(userId, new Set([socketId]));
   } else {
-    // User had already joined from one client and now joining using another client
+    //user had already joined from one client and now joining using another client
     userSocketIdMap.get(userId).add(socketId);
   }
   return mapToObject(userSocketIdMap);
 }
 
-// This function removes a doctor from the available doctor room when offline
+// This function is use for removing the doctor to the available doctor room when the doctor is offline
 function removeClientFromMap(userId, socketId) {
-  if (!userId || !socketId) return mapToObject(userSocketIdMap);
-  
   if (userSocketIdMap.has(userId)) {
     let userSocketIdSet = userSocketIdMap.get(userId);
     userSocketIdSet.delete(socketId);
-    // If there are no clients for a user, remove that user from online
-    if (userSocketIdSet.size === 0) {
+    //if there are no clients for a user, remove that user from online
+    if (userSocketIdSet.size == 0) {
       userSocketIdMap.delete(userId);
     }
   }
   return mapToObject(userSocketIdMap);
 }
 
-// This is a reusable function to convert a JavaScript Map to an object
-function mapToObject(map) {
-  if (map instanceof Map) {
-    return Object.fromEntries(
-      Array.from(map.entries()).map(([key, value]) => {
-        if (value instanceof Set) {
-          return [key, Array.from(value)];
-        }
-        return [key, value];
-      })
-    );
-  } else {
-    // Handle case where a room Map from socket.io is passed
-    const obj = {};
-    for (const [key, value] of Object.entries(map)) {
-      if (value instanceof Set) {
-        obj[key] = Array.from(value);
-      } else {
-        obj[key] = value;
-      }
-    }
-    return obj;
-  }
-}
+// This is a reusable function for change the javascript map to object type
+function mapToObject(userSocketIdMap) {
+  const obj = Object.fromEntries(userSocketIdMap);
 
+  Object.keys(obj).forEach((key) => {
+    obj[key] = Array.from(obj[key]);
+  });
+  return obj;
+}
 module.exports = useSocket;
+

@@ -99,9 +99,11 @@ exports.getDoctor = asyncHandler(async (req, res) => {
 // POST Request in REST API
 // createDoctor() is use for creating a doctor in the database
 exports.createDoctor = asyncHandler(async (req, res) => {
-  // find specialization first
-  const specialization = await Specialization.findById(req.body.specialization);
-  if (!specialization) return res.status(400).send('Invalid specialization');
+  // Only validate specialization if it's provided
+  if (req.body.specialization && req.body.specialization !== '---') {
+    const specialization = await Specialization.findById(req.body.specialization);
+    if (!specialization) return res.status(400).send('Invalid specialization');
+  }
 
   // get information from HTTP request
   let doctor = new Doctor({
@@ -109,10 +111,10 @@ exports.createDoctor = asyncHandler(async (req, res) => {
     email: req.body.email,
     passwordHash: bcrypt.hashSync(req.body.password, 10),
     phone: req.body.phone,
-    specialization: req.body.specialization,
+    specialization: req.body.specialization !== '---' ? req.body.specialization : null,
     specializationDetail: req.body.specializationDetail,
-    background: req.body.background,
-    hospital: req.body.hospital,
+    background: req.body.background || 'Not specified',
+    hospital: req.body.hospital || 'Not specified',
     gender: req.body.gender
   });
 
@@ -134,10 +136,12 @@ exports.createDoctor = asyncHandler(async (req, res) => {
 // PUT Request in REST API
 // updateDoctor() is use for updating a doctor in the database
 exports.updateDoctor = asyncHandler(async (req, res) => {
-  // find specialization from HTTP request
-  if (req.body.specialization) {
+  // find specialization from HTTP request if provided
+  if (req.body.specialization && req.body.specialization !== '---') {
     const specialization = await Specialization.findById(req.body.specialization);
     if (!specialization) return res.status(400).send('Invalid specialization');
+  } else if (req.body.specialization === '---') {
+    req.body.specialization = null;
   }
   // find password from HTTP request
   if (req.body.password) {

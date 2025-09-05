@@ -1,20 +1,38 @@
 /* Incomming call card component */
-import {Fragment, useRef, useState} from 'react';
+import {Fragment, useRef, useState, useEffect} from 'react';
 import {Dialog, Transition} from '@headlessui/react';
 import {PhoneIncomingIcon} from '@heroicons/react/outline';
 import useSound from 'use-sound';
 import sound from '../sound/ringtone.mp3';
 
-const IncommingCall = ({answerCall}) => {
+const IncommingCall = ({answerCall, callerInfo}) => {
   const [open, setOpen] = useState(true);
-
   const cancelButtonRef = useRef(null);
-
   const [play, {stop}] = useSound(sound, {
     loop: true,
   });
-
-  play();
+  
+  // Start playing the ringtone when component mounts
+  useEffect(() => {
+    try {
+      play();
+      
+      // Set a timeout to auto-decline the call after 30 seconds
+      const timeoutId = setTimeout(() => {
+        console.log("Call auto-declined after timeout");
+        stop();
+        setOpen(false);
+      }, 30000);
+      
+      // Clean up sound and timeout when component unmounts
+      return () => {
+        stop();
+        clearTimeout(timeoutId);
+      };
+    } catch (err) {
+      console.error("Error playing sound:", err);
+    }
+  }, [play, stop]);
 
   return (
     <Transition.Root show={open} as={Fragment}>
@@ -67,11 +85,13 @@ const IncommingCall = ({answerCall}) => {
                       as='h3'
                       className='text-lg leading-6 font-medium text-gray-900'
                     >
-                      Incomming Call
+                      Incoming Call
                     </Dialog.Title>
                     <div className='mt-2'>
                       <p className='text-sm text-gray-500'>
-                        Requesting consultant from patient
+                        {callerInfo 
+                          ? `Call from ${callerInfo.name || 'Patient'}`
+                          : 'Requesting consultation from patient'}
                       </p>
                     </div>
                   </div>
@@ -81,11 +101,23 @@ const IncommingCall = ({answerCall}) => {
                 <button
                   className='w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm'
                   onClick={() => {
-                    answerCall();
+                    answerCall(true); // Accept the call
                     stop();
+                    setOpen(false);
                   }}
                 >
                   Answer
+                </button>
+                <button
+                  className='mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm'
+                  onClick={() => {
+                    answerCall(false); // Decline the call
+                    stop();
+                    setOpen(false);
+                  }}
+                  ref={cancelButtonRef}
+                >
+                  Decline
                 </button>
               </div>
             </div>

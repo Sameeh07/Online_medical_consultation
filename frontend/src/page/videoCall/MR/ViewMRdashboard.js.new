@@ -25,44 +25,13 @@ export default function ViewMRdashboard({match}) {
 
   useEffect(() => {
     if (state.data) {
-      // Check if we have a valid patient ID
-      if (!match.params.id || match.params.id === 'undefined' || match.params.id === 'null') {
-        setMr({
-          data: [],
-          isPending: false,
-          error: "Missing patient ID. Cannot fetch medical records."
-        });
-        setPatient({
-          data: null,
-          isPending: false,
-          error: "Missing patient ID. Cannot load patient information."
-        });
-      } else {
-        fetchMR(setMr, match.params.id); // get medical record
-        fetchPatient(setPatient, match.params.id); // get patient information
-      }
+      fetchMR(setMr, match.params.id); // get medical record
+      fetchPatient(setPatient,match.params.id) // get patient information
     }
-  }, [setMr, state.data, match.params.id]);
+  }, [setMr, state.data,match.params.id]);
 
-  // Handle loading state
-  if (mr.isPending || patient.isPending) {
+  if (mr.isPending) {
     return <Spinner />;
-  }
-  
-  // Handle error state
-  if (mr.error || patient.error) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-semibold text-red-600 mb-4">Error Loading Data</h2>
-        <p className="text-gray-700 mb-6">{mr.error || patient.error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="px-6 py-3 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
-        >
-          Try Again
-        </button>
-      </div>
-    );
   } else {
     return (
       <div className='font-fontPro'>
@@ -185,17 +154,6 @@ export default function ViewMRdashboard({match}) {
 
 const fetchMR = (setMr, id) => {
   const fetchData = async () => {
-    // Check if ID is valid
-    if (!id || id === 'undefined' || id === 'null') {
-      console.error("Invalid patient ID for medical records fetch");
-      setMr({
-        data: [],
-        isPending: false,
-        error: "Invalid patient ID",
-      });
-      return;
-    }
-    
     try {
       console.log(`Fetching medical records for patient ID: ${id}`);
       let res = await Axios.get(
@@ -242,17 +200,6 @@ const fetchMR = (setMr, id) => {
 
 const fetchPatient = (setPatient, id) => {
   const fetchData = async () => {
-    // Check if ID is valid
-    if (!id || id === 'undefined' || id === 'null') {
-      console.error("Invalid patient ID for patient fetch");
-      setPatient({
-        data: null,
-        isPending: false,
-        error: "Invalid patient ID",
-      });
-      return;
-    }
-    
     try {
       console.log(`Fetching patient data for ID: ${id}`);
       let res = await Axios.get(
@@ -266,15 +213,6 @@ const fetchPatient = (setPatient, id) => {
       let data = res.data.data;
       console.log("Retrieved patient data:", data);
       
-      if (!data) {
-        setPatient({
-          data: null,
-          isPending: false,
-          error: "Patient data not found",
-        });
-        return;
-      }
-      
       setPatient({
         data: data,
         isPending: false,
@@ -282,19 +220,10 @@ const fetchPatient = (setPatient, id) => {
       });
     } catch (error) {
       console.error("Error fetching patient data:", error);
-      let errorMessage = "Failed to load patient data";
-      if (error.response) {
-        // Server responded with an error status
-        errorMessage = `Server error: ${error.response.status} - ${error.response.data.message || "Unknown error"}`;
-      } else if (error.request) {
-        // Request made but no response received
-        errorMessage = "No response from server. Please check your connection.";
-      }
-      
       setPatient({
         data: null,
         isPending: false,
-        error: errorMessage,
+        error: error,
       });
     }
   };

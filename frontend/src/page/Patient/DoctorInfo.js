@@ -20,21 +20,58 @@ const DoctorInfo = ({match}) => {
   const {state} = useFetchUser(); // User data
 
   useEffect(() => {
-    const newSocket = io('localhost:5000/'); // connect socket
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+    const newSocket = io(socketUrl, {
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      transports: ['websocket', 'polling']
+    });
+    
+    console.log("Connecting to socket server at:", socketUrl);
+    
+    // Socket connection status handling
+    newSocket.on('connect', () => {
+      console.log('Socket connected successfully with ID:', newSocket.id);
+      getOnlineDoc(newSocket, setOnlineDoc, setFetchFail); // get list of avaliable doctor
+    });
+    
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      alert('Error connecting to the server. Please check your internet connection and try again.');
+    });
+    
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`Socket reconnection attempt ${attemptNumber}`);
+    });
+    
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log(`Socket reconnected after ${attemptNumber} attempts`);
+      getOnlineDoc(newSocket, setOnlineDoc, setFetchFail); // refresh doctor list after reconnection
+    });
+    
+    newSocket.on('reconnect_failed', () => {
+      console.error('Socket reconnection failed');
+      alert('Failed to connect to the server. Please refresh the page and try again.');
+    });
+    
     setSocket(newSocket);
-    getOnlineDoc(newSocket, setOnlineDoc, setFetchFail); // get list of avaliable doctor
+    
     newSocket.on('availableCall', (status) => { // listen for doctor to answer call
       if (status) {
         newSocket.disconnect();
         history.push({
           pathname: `/call/${match.params.id}`,
-          state: {type: 'patient', user: 'Not a doctor'},
+          state: {
+            type: 'patient', 
+            user: state.user || { id: null, name: "Unknown Patient" }
+          },
         });
       } else {
         setFetchFail(true);
       }
     });
     
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setSocket, history, match.params.id]);
 
   // doctor is not avaliable
@@ -50,21 +87,54 @@ const DoctorInfo = ({match}) => {
 
   // call doctor
   const callDoctor = () => {
-    if (!fetchFail) {
-      let socketList = onlineDoc[match.params.id];
-      socketList.forEach((socketId) => {
-        socket.emit('call', socketId, {
-          from: socket.id,
-          url: match.params.id,
-          patient: state.data,
+    if (!fetchFail && onlineDoc) {
+      try {
+        console.log(`Requesting call with doctor ${match.params.id}`);
+        let socketList = onlineDoc[match.params.id];
+        
+        if (!socketList || socketList.length === 0) {
+          console.error("Doctor socket ID not found");
+          alert("Doctor is currently unavailable. Please try again later.");
+          return;
+        }
+        
+        // Create patient info object for the doctor to use
+        const patientInfo = state.user ? {
+          id: state.user.id || undefined,
+          name: state.user.name || "Unknown Patient",
+          // Add any other patient info you want to make available to the doctor
+        } : { name: "Unknown Patient" };
+        
+        // Log the data being sent
+        console.log("Patient info being sent:", patientInfo);
+        
+        socketList.forEach((socketId) => {
+          console.log(`Sending call request to socket: ${socketId}`);
+          socket.emit('call', socketId, {
+            from: socket.id,
+            url: match.params.id,
+            patient: patientInfo
+          });
         });
-      });
+        
+        console.log("Call request sent to doctor");
+      } catch (err) {
+        console.error("Error requesting call:", err);
+        alert("An error occurred while trying to call the doctor. Please try again.");
+      }
+    } else {
+      alert("Doctor is currently unavailable. Please try again later.");
     }
   };
 
   // color of specialization
   const colorDoc = (doctor) => {
     let color = '';
+    // Check if specialization exists
+    if (!doctor || !doctor.specialization) {
+      return 'gray-300';
+    }
+    
     switch (doctor.specialization.specialization) {
       case 'Physician':
         color = 'blue-300';
@@ -139,7 +209,9 @@ const DoctorInfo = ({match}) => {
                 data
               )}  inline-block px-1 rounded-md text-center justify-center`}
             >
-              {data.specialization.specialization}
+              {data && data.specialization && data.specialization.specialization 
+                ? data.specialization.specialization 
+                : 'Not specified'}
             </h1>
           </div>
         </div>
@@ -204,18 +276,18 @@ const DoctorInfo = ({match}) => {
 
 // get the doctor information
 const getOnlineDoc = (socket, setOnlineDoc, setFetchFail) => {
-  socket.on('connect', () => {
-    socket.emit('get-online-doctor', socket.id);
-  });
+  socket.emit('get-online-doctor', socket.id);
+  
   socket.on('updateDoctorList', (doctor) => {
+    console.log("Received online doctor list:", doctor);
     if (Object.keys(doctor).length === 0) {
+      console.log("No doctors available online");
       setOnlineDoc(null);
-    } else {
-      setOnlineDoc(doctor);
-    }
-    console.log(doctor);
-    if (Object.keys(doctor).length === 0) {
       setFetchFail(true);
+    } else {
+      console.log(`Found ${Object.keys(doctor).length} doctors online`);
+      setOnlineDoc(doctor);
+      setFetchFail(false);
     }
   });
 };

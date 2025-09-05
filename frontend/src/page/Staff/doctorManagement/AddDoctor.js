@@ -14,6 +14,11 @@ const AddDoctor = () => {
     isPending: true,
     error: null,
   });
+  
+  // New state for adding a specialization
+  const [newSpecialization, setNewSpecialization] = useState('');
+  const [showAddSpecialization, setShowAddSpecialization] = useState(false);
+  const [addingSpecialization, setAddingSpecialization] = useState(false);
 
   // doctor information
   const [name, setName] = useState();
@@ -32,6 +37,42 @@ const AddDoctor = () => {
   useEffect(() => {
     fetchSpecialization(setSpec); // get specialization
   }, [setSpec]);
+  
+  // Function to add a new specialization
+  const handleAddSpecialization = async () => {
+    if (!newSpecialization.trim()) {
+      setError("Specialization name cannot be empty");
+      return;
+    }
+    
+    setAddingSpecialization(true);
+    try {
+      const response = await Axios.post(`${API_BASE_URL}/specialization/`, 
+        { 
+          specialization: newSpecialization,
+          detail: 'Added from doctor creation'
+        }, 
+        config
+      );
+      
+      // Update the specialization list
+      if (response.data && response.data.data) {
+        setSpec(prev => ({
+          ...prev,
+          data: [...(prev.data || []), response.data.data]
+        }));
+        // Select the new specialization
+        setSP(response.data.data.id);
+        setNewSpecialization('');
+        setShowAddSpecialization(false);
+      }
+    } catch (err) {
+      console.error("Error adding specialization:", err);
+      setError(err.response?.data?.message || "Failed to add specialization");
+    } finally {
+      setAddingSpecialization(false);
+    }
+  };
 
   // token
   const config = {
@@ -42,25 +83,34 @@ const AddDoctor = () => {
 
   // add doctor
   const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (password !== confirmPass) {
+      setError("Password Doesn't match");
+      return;
+    }
+    
+    // Validate required fields
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+    
     let formData = new FormData();
-    formData.append('name', name);
-    formData.append('gender', gender);
-    formData.append('specialization',SP);
-    formData.append('password',password);
+    formData.append('name', name || '');
+    formData.append('gender', gender || 'Male');
+    formData.append('specialization', SP || '---');
+    formData.append('password', password);
     formData.append('email', email);
-    formData.append('phone', phone);
-    formData.append('hospital', hospital);
-    formData.append('specializationDetail', SD);
-    formData.append('background', background);
+    formData.append('phone', phone || '');
+    formData.append('hospital', hospital || 'Not specified');
+    formData.append('specializationDetail', SD || '');
+    formData.append('background', background || 'Not specified');
     if (photo) {
       formData.append('photo', photo);
     }
 
-    if (password !== confirmPass) {
-      setError("Password Doesn't match");
-    } else {
-    e.preventDefault();
-    Axios.post(`http://localhost:5000/api/v1/doctor/`, formData, config)
+    Axios.post(`${API_BASE_URL}/doctor/`, formData, config)
       .then((res) => {
         return res.data;
       })
@@ -68,10 +118,9 @@ const AddDoctor = () => {
         history.goBack();
       })
       .catch((err) => {
-        console.log(err.response.data);
-        setError(err.response.data.message);
+        console.log(err.response?.data);
+        setError(err.response?.data?.message || 'An error occurred');
       });
-    }
   };
 
   return (
@@ -121,31 +170,72 @@ const AddDoctor = () => {
                   </div>
                   <div className='w-2/5 px-3 mb-2'>
                     <label className='text-xs px-1 text-black'>Specialization</label>
-                    <div className='flex'>
-                      <div className='w-10 z-10 pl-1 text-center pointer-events-none flex items-center justify-center' />
-                      <select
-                        onChange={(e) => setSP(e.target.value)}
-                        className='w-full -ml-10 pl-4 pr-3 py-2 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500 '
-                      >
-                          <option value="---">---</option>
-                        {specialization.data &&
-                          specialization.data.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.specialization}
-                            </option>
-                          ))}
-                      </select>
+                    <div className='flex flex-col'>
+                      <div className='flex'>
+                        <div className='w-10 z-10 pl-1 text-center pointer-events-none flex items-center justify-center' />
+                        {!showAddSpecialization ? (
+                          <>
+                            <select
+                              onChange={(e) => setSP(e.target.value)}
+                              className='w-full -ml-10 pl-4 pr-3 py-2 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500 '
+                            >
+                              <option value="---">---</option>
+                              {specialization.data && specialization.data.length > 0 ? (
+                                specialization.data.map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.specialization}
+                                  </option>
+                                ))
+                              ) : (
+                                <option value="---">No specializations available</option>
+                              )}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddSpecialization(true)}
+                              className="ml-2 px-3 py-2 bg-blue-500 text-white rounded-lg"
+                            >
+                              +
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex w-full">
+                            <input
+                              value={newSpecialization}
+                              onChange={(e) => setNewSpecialization(e.target.value)}
+                              placeholder="Enter new specialization"
+                              className='w-full -ml-10 pl-4 pr-3 py-2 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500'
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddSpecialization}
+                              disabled={addingSpecialization}
+                              className="ml-2 px-3 py-2 bg-green-500 text-white rounded-lg"
+                            >
+                              {addingSpecialization ? 'Adding...' : 'Add'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddSpecialization(false)}
+                              className="ml-2 px-3 py-2 bg-red-500 text-white rounded-lg"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div className='flex -mx-3'>
                   <div className='w-1/2 px-3 mb-2'>
-                    <label className='text-xs px-1 text-black'>Email</label>
+                    <label className='text-xs px-1 text-black'>Email <span className="text-red-500">*</span></label>
                     <div className='flex'>
                       <div className='w-10 z-10 pl-1 text-center pointer-events-none flex items-center justify-center' />
                       <input
                         onChange={(e) => setEmail(e.target.value)}
                         className='w-full -ml-10 pl-4 pr-3 py-2 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500 '
+                        required
                       />
                     </div>
                   </div>
@@ -164,19 +254,20 @@ const AddDoctor = () => {
                 </div>
                 <div className='flex -mx-3'>
                   <div className='w-1/2 px-3 mb-2'>
-                    <label className='text-xs px-1 text-black'>Password</label>
+                    <label className='text-xs px-1 text-black'>Password <span className="text-red-500">*</span></label>
                     <div className='flex'>
                       <div className='w-10 z-10 pl-1 text-center pointer-events-none flex items-center justify-center' />
                       <input
                       type="password"
                         onChange={(e) => setPassword(e.target.value)}
                         className='w-full -ml-10 pl-4 pr-3 py-2 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500 '
+                        required
                       />
                     </div>
                   </div>
                   <div className='w-1/2 px-3 mb-2'>
                     <label className='text-xs px-1 text-black'>
-                      Confirm Password
+                      Confirm Password <span className="text-red-500">*</span>
                     </label>
                     <div className='flex'>
                       <div className='w-10 z-10 pl-1 text-center pointer-events-none flex items-center justify-center' />
@@ -184,6 +275,7 @@ const AddDoctor = () => {
                       type="password"
                         onChange={(e) => setConfirmPass(e.target.value)}
                         className='w-full -ml-10 pl-4 pr-3 py-2 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500 '
+                        required
                       />
                     </div>
                   </div>
@@ -275,14 +367,21 @@ const fetchSpecialization = (setSpec) => {
       if (!Array.isArray(data)) {
         data = [data];
       }
+      
+      // Handle the case when there's no data
+      if (!data || data.length === 0) {
+        console.log("No specialization data found");
+      }
+      
       setSpec({
         data: data,
         isPending: false,
         error: null,
       });
     } catch (error) {
+      console.error("Error fetching specializations:", error);
       setSpec({
-        data: null,
+        data: [],
         isPending: false,
         error: error,
       });

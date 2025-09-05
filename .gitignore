@@ -1,2 +1,12 @@
 node_modules
 config.env
+.env
+*.env
+.DS_Store
+.vscode/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+build/
+dist/

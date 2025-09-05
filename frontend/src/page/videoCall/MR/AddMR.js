@@ -47,21 +47,25 @@ const AddMR = () => {
   // adding new record
   const handleSubmit = async (e) => {
     e.preventDefault();
-    Axios.post(
-      `${API_BASE_URL}/medicalRecord/`,
-      bodyParameters,
-      config
-    )
-      .then((res) => {
-        return res.data;
-      })
-      .then(() => {
-        history.goBack();
-      })
-      .catch((err) => {
-        console.log(err.response.data);
-        setError(err.response.data);
-      });
+    try {
+      const response = await Axios.post(
+        `${API_BASE_URL}/medicalRecord/`,
+        bodyParameters,
+        config
+      );
+      
+      console.log("Medical record created successfully:", response.data);
+      
+      // Show success message
+      alert("Medical record created successfully!");
+      
+      // Navigate back
+      history.goBack();
+    } catch (err) {
+      console.error("Error creating medical record:", err.response?.data || err);
+      setError(err.response?.data || { message: "Failed to create medical record" });
+      alert(`Error: ${err.response?.data?.message || "Failed to create medical record"}`);
+    }
   };
 
   return (

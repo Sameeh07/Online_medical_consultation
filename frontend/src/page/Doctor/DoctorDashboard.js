@@ -27,32 +27,94 @@ const DoctorDashboard = () => {
   console.log(mr);
 
   useEffect(() => {
-    const newSocket = io('localhost:5000/');
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+    const newSocket = io(socketUrl, {
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      transports: ['websocket', 'polling']
+    });
+    
+    console.log("Connecting to socket server at:", socketUrl);
+    
+    // Socket connection status handling
+    newSocket.on('connect', () => {
+      console.log('Socket connected successfully with ID:', newSocket.id);
+      if (state.data) {
+        console.log(`Setting doctor ${state.data.id} as online`);
+        // Make doctor available for patients
+        newSocket.emit('online-user', newSocket.id, state.data.id);
+        
+        // Log doctor's online status
+        console.log(`Doctor ${state.data.id} is now online and available for calls`);
+      }
+    });
+    
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+    
     if (state.data) {
       fetchMR(setMr, state.data.id);
-      setSocket(newSocket); // set doctor socket
-      connectUser(newSocket, state.data.id, setCall); // for answering call
+      setSocket(newSocket);
+      
+      // Set up call handling
+      newSocket.on('retrieve', (message) => {
+        console.log("Received call request:", message);
+        setCall(message);
+      });
     }
+    
+    // Cleanup on unmount
+    return () => {
+      if (newSocket) {
+        console.log("Disconnecting doctor from online status");
+        newSocket.disconnect();
+      }
+    };
   }, [setSocket, state.data, setMr]);
 
-  // retrieve call from patient
-  if (socket) {
-    socket.on('retrieve', (message) => {
-      setCall(message);
-      console.log(message);
-    });
-  }
-
   // answer call 
-  const answerCall = () => {
-    var delayInMilliseconds = 1000; //2 second
-    socket.emit('answerCall', call.from, true);
-    setTimeout(function () {
-      history.push({
-        pathname: `/call/${call.url}`,
-        state: {type: 'doctor', user: call.patient},
-      });
-    }, delayInMilliseconds);
+  const answerCall = (accept = true) => {
+    if (!socket || !call) {
+      console.error("Cannot answer call: socket or call info missing");
+      return;
+    }
+    
+    try {
+      console.log(`${accept ? 'Accepting' : 'Declining'} call from ${call.from}`);
+      socket.emit('answerCall', call.from, accept);
+      
+      if (accept) {
+        // Get patient information if available
+        let patientInfo = { id: undefined, name: "Unknown Patient" };
+        
+        // Check if patient info is in the call object
+        if (call.patient && typeof call.patient === 'object' && call.patient.id) {
+          patientInfo = call.patient;
+        } else if (typeof call.patient === 'string') {
+          // If it's just a name string, create a minimal object with no ID
+          patientInfo.name = call.patient;
+        }
+        
+        // Allow time for the signal to reach the patient
+        var delayInMilliseconds = 1000;
+        setTimeout(function () {
+          history.push({
+            pathname: `/call/${call.url}`,
+            state: {
+              type: 'doctor', 
+              user: patientInfo
+            },
+          });
+        }, delayInMilliseconds);
+      } else {
+        // Reset call state if declined
+        setCall(null);
+      }
+    } catch (err) {
+      console.error("Error answering call:", err);
+      alert("An error occurred while answering the call. Please try again.");
+    }
   };
 
   if (mr.isPending) {
@@ -136,6 +198,8 @@ const DoctorDashboard = () => {
     );
   }
 };
+
+// eslint-disable-next-line no-unused-vars
 const connectUser = (socket, userid, setCall) => {
   socket.on('connect', () => {
     socket.emit('online-user', socket.id, userid);

@@ -9,6 +9,7 @@ import {
   LogoutIcon,
   XIcon,
   CollectionIcon,
+  HomeIcon,
 } from '@heroicons/react/outline';
 // import {ChevronDownIcon} from '@heroicons/react/solid';
 import ReactLogo from '../img/logo.svg';
@@ -16,6 +17,11 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 const patientDropDown = [
+  {
+    name: "Home",
+    href: '/home',
+    icon: HomeIcon,
+  },
   {
     name: "User's profile",
     href: '/patient/profile',

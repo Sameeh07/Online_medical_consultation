@@ -4,7 +4,7 @@ import Home from './page/Patient/Home';
 import Landing from './page/All/Landing';
 import DoctorInfo from './page/Patient/DoctorInfo';
 import DoctorDashboard from './page/Doctor/DoctorDashboard';
-import Call from './page/videoCall/VideoCall';
+import Call from './page/videoCall/VideoCall';  // Using the standard import path
 import UserNavbar from './components/UserNavbar';
 
 import './App.css';
@@ -94,9 +94,3 @@ function DefaultContainer() {
 }
 
 export default App;
-
-
-
-
-
-

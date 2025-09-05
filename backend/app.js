@@ -19,8 +19,11 @@ const CLIENT_ORIGIN = process.env.CLIENT_URL || 'http://localhost:3000';
 const io = require('socket.io')(server, {
   cors: {
     origin: CLIENT_ORIGIN,
-    methods: ['GET', 'POST']
-  }
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  pingTimeout: 60000, // Increase timeout for better connection stability
+  maxHttpBufferSize: 1e8 // Increase buffer size for better video quality
 });
 
 // --- HTTP CORS middleware ---
