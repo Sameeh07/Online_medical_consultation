@@ -1,4 +1,4 @@
-<img width="1919" height="852" alt="testing doctor and patient live video call connection" src="https://github.com/user-attachments/assets/39049725-7d6f-4c0f-8513-abf1c9e25c05" /># Medical Consultation System
+# Medical Consultation System
 
 This is a website that enables patients to have a consultation with doctors remotely. The patient can choose a doctor to have a consultation by name and specialization and get the medical record that involves advisement or treatment from the doctor that has consulted with because some of the cases can be treated without going to the hospital. In the time of the Covid 19 situation, the hospital has become one of the most dangerous places. This website will be suitable for "New Normal" because it prevents oneself from having close contact with others.
 
