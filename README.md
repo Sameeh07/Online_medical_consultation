@@ -1,4 +1,4 @@
-# Medical Consultation System
+<img width="1919" height="852" alt="testing doctor and patient live video call connection" src="https://github.com/user-attachments/assets/39049725-7d6f-4c0f-8513-abf1c9e25c05" /># Medical Consultation System
 
 This is a website that enables patients to have a consultation with doctors remotely. The patient can choose a doctor to have a consultation by name and specialization and get the medical record that involves advisement or treatment from the doctor that has consulted with because some of the cases can be treated without going to the hospital. In the time of the Covid 19 situation, the hospital has become one of the most dangerous places. This website will be suitable for "New Normal" because it prevents oneself from having close contact with others.
 
@@ -145,3 +145,20 @@ $ npm start
 | Example                       | Result                                                   |
 | ----------------------------- | -------------------------------------------------------- |
 | /api/v1/doctor?page=2&limit=5 | Get the information in page 2 and have 5 doctor per page |
+
+
+
+### Snapshots:
+
+<img width="1913" height="875" alt="Screenshot 2025-05-12 053408" src="https://github.com/user-attachments/assets/06b58f16-243f-4a09-b825-0afbfc1816e7" />
+<img width="957" height="738" alt="when there is no doctor online" src="https://github.com/user-attachments/assets/e5787fb8-68bc-4e86-84ab-00dc790caaff" />
+<img width="1919" height="852" alt="testing doctor and patient live video call connection" src="https://github.com/user-attachments/assets/16b125c7-483a-4d1d-b4bb-5374c2408254" />
+<img width="937" height="775" alt="incoming call on doctor's device" src="https://github.com/user-attachments/assets/6ad60aa6-6ac6-4bbf-ad80-9490b3886d2a" />
+<img width="933" height="849" alt="availabe doctor shown in patient's home page 2" src="https://github.com/user-attachments/assets/3ef248ae-5a93-4c93-9c0c-34ee48ad39e0" />
+<img width="958" height="727" alt="availabe doctor shown in patient's home page 1" src="https://github.com/user-attachments/assets/b78f9188-3b2a-468d-ac8d-65363ce98777" />
+
+
+
+
+
+
