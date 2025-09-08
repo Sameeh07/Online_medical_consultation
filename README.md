@@ -59,7 +59,6 @@ $ npm start
 
 ## API Documentation
 
-#### API url : https://harmore.herokuapp.com
 
 #### Patient Route (Need JWT token)
 
